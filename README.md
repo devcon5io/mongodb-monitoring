@@ -1,4 +1,4 @@
-# MongoDB Mointoring 
+# MongoDB Monitoring 
 
 This services monitors MongoDB server by periodically polling the MongoDB server and pushing the status data into
 a timeseries DB, which can be further visualized with an appropriate tool.
