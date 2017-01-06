@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017 DevCon5 GmbH
+ */
+
 var MongoClient = require("vertx-mongo-js/mongo_client");
 
 var config = Vertx.currentContext().config();
