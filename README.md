@@ -26,46 +26,47 @@ All used tools and frameworks are Open Source.
 
 1. Download and install [Influx DB](https://www.influxdata.com/time-series-platform/influxdb/)
 2. Initialize the timeseries DB by creating a database and configure a retention policy
-```
-CREATE DATABASE mongo
-CREATE RETENTION POLICY "one_month" ON "mongo" DURATION 30d REPLICATION 1 DEFAULT
-```
+    ```
+    CREATE DATABASE mongo
+    CREATE RETENTION POLICY "one_month" ON "mongo" DURATION 30d REPLICATION 1 DEFAULT
+    ```
 3. Download and install [Grafana](https://grafana.net/) - for visualizing the status information
 4. Create a configuration file
-```
-{
-  "interval": 1000,
-  "mongoServer": [
+    ```
     {
-      "host": "localhost",
-      "db_name": "test",
-      "port": 27017,
-      "collections": [
-        "example"
-      ]
+      "interval": 1000,
+      "mongoServer": [
+        {
+          "host": "localhost",
+          "db_name": "test",
+          "port": 27017,
+          "collections": [
+            "example"
+          ]
+        }
+      ],
+      "influx": {
+        "dbname": "mongo",
+        "host": "localhost",
+        "port": 8086
+      }
     }
-  ],
-  "influx": {
-    "dbname": "mongo",
-    "host": "localhost",
-    "port": 8086
-  }
-}
-
-```
-- the interval for polling the MongoDB server, in ms 
-- mongo server defines the host and port of the server to monitor. To collects statistics of a database, the `db_name`
-has to be specified. If you want to monitor multiple databases, you have to configure multiple mongoServers (its and 
-array). To collect statistics of the collections of the database, add the collection names to the `collections` field't
-array. 
-- the influx document contains the connection parameters the for the influs db server and db to store the measures.
-- to authenticate with MongoDB, use `username` and `password` property, see also [Vert.x Mongo Client](http://vertx.io/docs/vertx-mongo-client/java/)
+    
+    ```
+   - the interval for polling the MongoDB server, in ms 
+   - mongo server defines the host and port of the server to monitor. To collects statistics of a database, the `db_name`
+    has to be specified. If you want to monitor multiple databases, you have to configure multiple mongoServers (its and 
+    array). To collect statistics of the collections of the database, add the collection names to the `collections` field't
+    array. 
+   - the influx document contains the connection parameters the for the influs db server and db to store the measures.
+   - to authenticate with MongoDB, use `username` and `password` property, see 
+   also [Vert.x Mongo Client](http://vertx.io/docs/vertx-mongo-client/java/)
 5. Download the [Vert.x](http://vertx.io/) full-distribution and put it's bin/ folder on the PATH so you can execute 
 vertx from any path
 6. Start Vertx using the configuration and deploy the Verticle
-```
-vertx run -conf config.json MongoInfluxMonitoringVerticle.js
-```
+    ```
+    vertx run -conf config.json MongoInfluxMonitoringVerticle.js
+    ```
 
 Note, this solution provides only basic capabilities but may be a good starting point for building your own custom 
 monitoring solution.
