@@ -1,0 +1,18 @@
+{
+  "interval": 1000,
+  "mongoServer": [
+    {
+      "host": "localhost",
+      "db_name": "test",
+      "port": 27017,
+      "collections": [
+        "example"
+      ]
+    }
+  ],
+  "influx": {
+    "dbname": "mongo",
+    "host": "localhost",
+    "port": 8086
+  }
+}
