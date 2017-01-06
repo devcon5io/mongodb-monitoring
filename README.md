@@ -59,9 +59,18 @@ has to be specified. If you want to monitor multiple databases, you have to conf
 array). To collect statistics of the collections of the database, add the collection names to the `collections` field't
 array. 
 - the influx document contains the connection parameters the for the influs db server and db to store the measures.
+- to authenticate with MongoDB, use `username` and `password` property, see also [Vert.x Mongo Client](http://vertx.io/docs/vertx-mongo-client/java/)
 5. Download the [Vert.x](http://vertx.io/) full-distribution and put it's bin/ folder on the PATH so you can execute 
 vertx from any path
 6. Start Vertx using the configuration and deploy the Verticle
 ```
 vertx run -conf config.json MongoInfluxMonitoringVerticle.js
 ```
+
+Note, this solution provides only basic capabilities but may be a good starting point for building your own custom 
+monitoring solution.
+
+- no authentication for InfluxDB
+- not all statistics are captured, but you can add additional mappings if needed (just look at the code)
+- it has been tested with Mongo server running on Windows, the serverStatus contains an extraInfo field that may not work on linux. If that
+causes problems, remove the `pagefile` measure
