@@ -26,12 +26,14 @@ All used tools and frameworks are Open Source.
 
 1. Download and install [Influx DB](https://www.influxdata.com/time-series-platform/influxdb/)
 2. Initialize the timeseries DB by creating a database and configure a retention policy
+
     ```
     CREATE DATABASE mongo
     CREATE RETENTION POLICY "one_month" ON "mongo" DURATION 30d REPLICATION 1 DEFAULT
     ```
 3. Download and install [Grafana](https://grafana.net/) - for visualizing the status information
 4. Create a configuration file
+
     ```
     {
       "interval": 1000,
@@ -64,6 +66,7 @@ All used tools and frameworks are Open Source.
 5. Download the [Vert.x](http://vertx.io/) full-distribution and put it's bin/ folder on the PATH so you can execute 
 vertx from any path
 6. Start Vertx using the configuration and deploy the Verticle
+
     ```
     vertx run -conf config.json MongoInfluxMonitoringVerticle.js
     ```
