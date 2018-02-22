@@ -2,11 +2,12 @@
  * Copyright (C) 2017 DevCon5 GmbH
  */
 
-package mongodb.monitoring;
+package io.devcon5.monitoring;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -16,12 +17,12 @@ import io.vertx.core.json.JsonObject;
  * MongoDB monitoring verticle. This will periodically poll the mongoDB server for its status and pushes the data
  * into a timeseries DB.
  */
-public class Launcher {
+public class Collector extends AbstractVerticle{
 
     public static void main(String... args) throws ExecutionException, InterruptedException {
 
         if(args.length == 0){
-            System.out.println("usage: Launcher [configFile]");
+            System.out.println("usage: Collector [configFile]");
             return;
         }
         String configFile = args[0];
@@ -30,8 +31,7 @@ public class Launcher {
 
         final JsonObject config = readFileToJson(vertx, configFile);
 
-        vertx.deployVerticle("js:ServerStatusVerticle.js",
-                new DeploymentOptions().setConfig(config));
+        vertx.deployVerticle("js:ServerStatusVerticle.js", new DeploymentOptions().setConfig(config));
     }
 
     /**
