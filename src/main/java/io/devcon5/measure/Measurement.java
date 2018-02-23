@@ -1,26 +1,42 @@
-package io.devcon5.timeseries;
+package io.devcon5.measure;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
-import java.util.*;
-
+/**
+ * A Measurement represents a collection of values at a specific point in time. The measurement may contain
+ * several tags that allow classification/categorizations of these timepoints.
+ */
 public class Measurement {
 
-    private static final byte TYPE_INTEGER = (byte) 0x01;
-    private static final byte TYPE_LONG = (byte) 0x02;
-    private static final byte TYPE_FLOAT = (byte) 0x03;
-    private static final byte TYPE_DOUBLE = (byte) 0x04;
-    private static final byte TYPE_BOOLEAN = (byte) 0x05;
-    private static final byte TYPE_STRING = (byte) 0x06;
-    private static final byte ASSIGN = (byte) 0xfa;
-    private static final byte SEPERATOR = (byte) 0xfd;
-    private static final byte GROUP_SEPARATOR = (byte) 0xfe;
-
+    /**
+     * Timestamp in nanoseconds
+     */
     final long timestamp;
+    /**
+     * The name of the measurement. Must not be null.
+     */
     final String name;
+
+    /**
+     * A sorted list of key-value pairs representing tags
+     */
     final SortedMap<String, String> tags;
+
+    /**
+     * The actual values of these measurements. The values could be
+     * <ul>
+     *     <li>Boolean</li>
+     *     <li>Integer</li>
+     *     <li>Long</li>
+     *     <li>Float</li>
+     *     <li>Double</li>
+     *     <li>String</li>
+     * </ul>
+     */
     final Map<String, Object> values;
 
     Measurement(String name, long ts, Map<String, String> tags, Map<String, Object> values) {
@@ -42,37 +58,49 @@ public class Measurement {
         this.values = Collections.unmodifiableMap(values);
     }
 
+    /**
+     * The point in time of this measurement in nanoseconds since 1.1.1970
+     * @return
+     *  the timestamp in ns
+     */
     public long getTimestamp() {
         return timestamp;
     }
 
+    /**
+     * The name of the measurment
+     * @return
+     *  a non-null, non-empty string representing this measurement
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * The tags for categorization/calssification of the measurement.
+     * @return
+     *  an unmodifiable map containing the key-value pairs
+     */
     public SortedMap<String, String> getTags() {
         return tags;
     }
 
+    /**
+     * The actual values of this measurement. The values could be of the following types.
+     * <ul>
+     *     <li>Boolean</li>
+     *     <li>Integer</li>
+     *     <li>Long</li>
+     *     <li>Float</li>
+     *     <li>Double</li>
+     *     <li>String</li>
+     * </ul>
+     *
+     * @return
+     *  an unmodifiable map containing the key-value pairs.
+     */
     public Map<String, Object> getValues() {
         return values;
-    }
-
-    public String toJson() {
-        return Json.encode(this);
-    }
-
-    public Buffer toBuffer() {
-
-        return new BufferEncoding().encode(this);
-    }
-
-    public static Measurement fromJson(String jsonString) {
-        return Json.decodeValue(jsonString, Measurement.class);
-    }
-
-    public static Measurement fromBuffer(Buffer buf) {
-        return new BufferEncoding().decode(buf);
     }
 
     @Override
@@ -86,6 +114,46 @@ public class Measurement {
         return sb.toString();
     }
 
+    @Override
+    public boolean equals(final Object o) {
+
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final Measurement that = (Measurement) o;
+
+        if (timestamp != that.timestamp) {
+            return false;
+        }
+        if (!name.equals(that.name)) {
+            return false;
+        }
+        if (!tags.equals(that.tags)) {
+            return false;
+        }
+        return values.equals(that.values);
+
+    }
+
+    @Override
+    public int hashCode() {
+
+        int result = (int) (timestamp ^ (timestamp >>> 32));
+        result = 31 * result + name.hashCode();
+        result = 31 * result + tags.hashCode();
+        result = 31 * result + values.hashCode();
+        return result;
+    }
+
+    /**
+     * Creates a new builder for a Measurment
+     * @return
+     *  a new, non-null builder
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -144,26 +212,33 @@ public class Measurement {
             return this;
         }
 
+        /**
+         * Validates the collected parameters and creates the Measurement.
+         *
+         *
+         * @return
+         *  a non-null Measurement
+         * @throws java.lang.IllegalArgumentException
+         *  if the validation of the parameters failed
+         */
         public Measurement build() {
             if (name == null || name.trim().isEmpty()) {
-                throw new IllegalStateException("name is not set");
+                throw new IllegalArgumentException("name is not set");
             }
             if (timestamp < 0) {
-                throw new IllegalStateException("timestamp is invalid: " + timestamp);
+                throw new IllegalArgumentException("timestamp is invalid: " + timestamp);
             }
             if (timestamp == 0) {
                 timestamp = System.currentTimeMillis() * 1_000_000;
             }
             if (numberValues.isEmpty() && booleanValues.isEmpty() && stringValues.isEmpty()) {
-                throw new IllegalStateException("no values recorded");
+                throw new IllegalArgumentException("no values recorded");
             }
 
             return new Measurement(this);
         }
 
     }
-
-
 }
 
 

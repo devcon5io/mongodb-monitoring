@@ -1,12 +1,13 @@
-package io.devcon5.timeseries.influx;
-
-import io.devcon5.timeseries.Measurement;
-import io.vertx.core.buffer.Buffer;
+package io.devcon5.digester.influx;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collector;
 import java.util.stream.Stream;
+
+import io.devcon5.measure.Measurement;
+import io.vertx.core.buffer.Buffer;
+
 
 public class LineProtocol {
 

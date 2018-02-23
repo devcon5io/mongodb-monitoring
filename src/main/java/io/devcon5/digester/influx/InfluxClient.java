@@ -1,6 +1,9 @@
-package io.devcon5.timeseries.influx;
+package io.devcon5.digester.influx;
 
-import io.devcon5.timeseries.Measurement;
+import java.util.Collection;
+import java.util.Collections;
+
+import io.devcon5.measure.Measurement;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -9,9 +12,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-
-import java.util.Collection;
-import java.util.Collections;
 
 public class InfluxClient {
 

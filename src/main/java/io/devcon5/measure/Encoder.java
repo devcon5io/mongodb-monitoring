@@ -1,4 +1,4 @@
-package io.devcon5.timeseries;
+package io.devcon5.measure;
 
 public interface Encoder<T> {
 

@@ -1,9 +1,10 @@
-package io.devcon5.timeseries.influx;
+package io.devcon5.digester.influx;
 
-import io.devcon5.timeseries.Measurement;
-import io.devcon5.timeseries.Digester;
+import io.devcon5.measure.BufferEncoding;
+import io.devcon5.measure.Decoder;
+import io.devcon5.measure.Digester;
+import io.devcon5.measure.Measurement;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 public class InfluxDigester extends AbstractVerticle implements Digester {
@@ -18,10 +19,12 @@ public class InfluxDigester extends AbstractVerticle implements Digester {
         final int port = config.getInteger("port", 8086);
         final String db = config.getString("db");
 
+        final Decoder dec = BufferEncoding.decoder();
+
         this.client = InfluxClient.create(vertx, host, port).useDatabase(db);
 
-        vertx.eventBus().consumer(DIGEST, msg -> {
-            final Measurement m = Measurement.fromBuffer((Buffer)msg.body());
+        vertx.eventBus().consumer(DIGEST_ADDR, msg -> {
+            final Measurement m = dec.decode(msg.body());
             client.send(m, done -> {
                 if(done.succeeded()){
                     System.out.println("Stored " + m);

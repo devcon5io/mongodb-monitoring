@@ -1,7 +1,12 @@
-package io.devcon5.collector;
+package io.devcon5.collector.artifactory;
 
-import io.devcon5.timeseries.Measurement;
-import io.devcon5.timeseries.Digester;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import io.devcon5.measure.BufferEncoding;
+import io.devcon5.measure.Digester;
+import io.devcon5.measure.Encoder;
+import io.devcon5.measure.Measurement;
 import io.devcon5.units.SpaceUnit;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
@@ -9,9 +14,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Collector that periodically polls the artifactory server to fetch current storage statistics.
@@ -45,6 +47,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private String authorization;
 
     private WebClient webclient;
+    private Encoder encoder;
 
     @Override
     public void start() throws Exception {
@@ -58,6 +61,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
         final long interval = config.getLong("interval", 60000L);
 
         this.webclient = WebClient.create(vertx);
+        this.encoder = BufferEncoding.encoder();
 
         vertx.setPeriodic(interval, this::pollStatus);
     }
@@ -71,7 +75,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private void processResult(AsyncResult<HttpResponse<Buffer>> resp) {
         if (resp.succeeded()) {
             Measurement m = processStatistics(resp.result().bodyAsJsonObject());
-            vertx.eventBus().publish(Digester.DIGEST, m.toBuffer());
+            vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m));
         } else {
             resp.cause().printStackTrace();
         }
