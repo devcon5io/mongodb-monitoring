@@ -35,3 +35,10 @@ Run Sonarqube
         -p 9000:9000 \
         -p 9092:9092 \
         sonarqube:6.5
+
+Run Mongo
+---------
+
+    docker run --name mongo -d \
+        -p 27017:27017 \
+        mongo

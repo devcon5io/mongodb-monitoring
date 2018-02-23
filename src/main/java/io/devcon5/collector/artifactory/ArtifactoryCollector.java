@@ -1,5 +1,6 @@
 package io.devcon5.collector.artifactory;
 
+import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,6 +13,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
@@ -55,9 +57,9 @@ public class ArtifactoryCollector extends AbstractVerticle {
         final JsonObject config = config();
 
         this.artifactoryHost = config.getString("host", "localhost");
-        this.contextRoot = config.getString("contextRoot", "/");
-        this.artifactoryPort = config.getInteger("port", 80);
-        this.authorization = config.getString("auth");
+        this.contextRoot = config.getString("contextRoot", "/artifactory/");
+        this.artifactoryPort = config.getInteger("port", 8081);
+        this.authorization = config.getString("auth", defaultBasicAuth());
         final long interval = config.getLong("interval", 60000L);
 
         this.webclient = WebClient.create(vertx);
@@ -66,13 +68,25 @@ public class ArtifactoryCollector extends AbstractVerticle {
         vertx.setPeriodic(interval, this::pollStatus);
     }
 
+    private String defaultBasicAuth() {
+
+        return "Basic " + Base64.getEncoder()
+                                .encodeToString("admin:password".getBytes());
+    }
+
     private void pollStatus(long timerId) {
-        webclient.get(artifactoryPort, artifactoryHost, contextRoot + "ui/storagesummary")
-                 .putHeader("Authorization", authorization)
-                 .send(this::processResult);
+
+        HttpRequest<Buffer> request = webclient.get(artifactoryPort,
+                                                    artifactoryHost,
+                                                    contextRoot + "ui/storagesummary");
+        if (this.authorization != null) {
+            request.putHeader("Authorization", authorization);
+        }
+        request.send(this::processResult);
     }
 
     private void processResult(AsyncResult<HttpResponse<Buffer>> resp) {
+
         if (resp.succeeded()) {
             Measurement m = processStatistics(resp.result().bodyAsJsonObject());
             vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m));
@@ -81,8 +95,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
         }
     }
 
-
     private Measurement processStatistics(JsonObject obj) {
+
         JsonObject fsSummary = obj.getJsonObject("fileStoreSummary");
 
         return Measurement.builder()
@@ -97,6 +111,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     }
 
     private Double parseSpacePercent(String space) {
+
         Matcher m = PERCENT_PATTERN.matcher(space);
         if (m.find()) {
             return Double.parseDouble(m.group(1)) / 100D;
@@ -105,6 +120,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     }
 
     private long parseSpace(String space) {
+
         SpaceUnit unit = SpaceUnit.parse(space);
         Matcher m = SPACE_PATTERN.matcher(space);
         if (m.find()) {

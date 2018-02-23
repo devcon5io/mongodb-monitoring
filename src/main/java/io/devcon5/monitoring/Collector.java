@@ -31,7 +31,7 @@ public class Collector extends AbstractVerticle{
 
         final JsonObject config = readFileToJson(vertx, configFile);
 
-        vertx.deployVerticle("js:ServerStatusVerticle.js", new DeploymentOptions().setConfig(config));
+        vertx.deployVerticle("js:MongoInfluxMonitoringVerticle.js", new DeploymentOptions().setConfig(config));
     }
 
     /**

@@ -17,7 +17,7 @@ public class InfluxDigester extends AbstractVerticle implements Digester {
         final JsonObject config = config();
         final String host = config.getString("host", "localhost");
         final int port = config.getInteger("port", 8086);
-        final String db = config.getString("db");
+        final String db = config.getString("database");
 
         final Decoder dec = BufferEncoding.decoder();
 
