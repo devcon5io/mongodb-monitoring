@@ -9,7 +9,7 @@ import io.vertx.core.buffer.Buffer;
  * Encoding do write and read a measurement from a Vert.x buffer. Unlike the JsonFormat, the buffer encoding
  * is more efficient toward space requirement.
  */
-public class BufferEncoding  {
+public class BufferEncoding {
 
     private static final byte TYPE_INTEGER = (byte) 0x01;
     private static final byte TYPE_LONG = (byte) 0x02;
@@ -21,26 +21,30 @@ public class BufferEncoding  {
     private static final byte SEPARATOR = (byte) 0xfd;
     private static final byte GROUP_SEPARATOR = (byte) 0xfe;
 
-    public static Encoder<Buffer> encoder(){
+    public static Encoder<Buffer> encoder() {
+
         return new BufferEncoder();
     }
-    public static Decoder<Buffer> decoder(){
+
+    public static Decoder<Buffer> decoder() {
+
         return new BufferDecoder();
     }
 
-
     private static class BufferEncoder implements Encoder<Buffer> {
+
         @Override
         public Buffer encode(Measurement m) {
+
             final Buffer buf = Buffer.buffer(64);
 
             buf.appendString(m.name).appendByte(GROUP_SEPARATOR);
             buf.appendLong(m.timestamp).appendByte(GROUP_SEPARATOR);
 
-            m.tags.forEach((k,v) -> buf.appendString(k).appendByte(ASSIGN).appendString(v).appendByte(SEPARATOR));
+            m.tags.forEach((k, v) -> buf.appendString(k).appendByte(ASSIGN).appendString(v).appendByte(SEPARATOR));
             buf.appendByte(GROUP_SEPARATOR);
 
-            m.values.forEach((k,v) -> {
+            m.values.forEach((k, v) -> {
                 buf.appendString(k).appendByte(ASSIGN);
                 appendValue(buf, v);
                 buf.appendByte(SEPARATOR);
@@ -50,23 +54,19 @@ public class BufferEncoding  {
         }
 
         private void appendValue(Buffer buf, Object v) {
-            if(v instanceof Integer){
-                buf.appendByte(TYPE_INTEGER).appendInt((Integer)v);
-            } else
-            if(v instanceof Long){
-                buf.appendByte(TYPE_LONG).appendLong((Long)v);
-            } else
-            if(v instanceof Float){
-                buf.appendByte(TYPE_FLOAT).appendFloat((Float)v);
-            }
-            if(v instanceof Double){
-                buf.appendByte(TYPE_DOUBLE).appendDouble((Double)v);
-            }
-            if(v instanceof Boolean){
+
+            if (v instanceof Integer) {
+                buf.appendByte(TYPE_INTEGER).appendInt((Integer) v);
+            } else if (v instanceof Long) {
+                buf.appendByte(TYPE_LONG).appendLong((Long) v);
+            } else if (v instanceof Float) {
+                buf.appendByte(TYPE_FLOAT).appendFloat((Float) v);
+            } else if (v instanceof Double) {
+                buf.appendByte(TYPE_DOUBLE).appendDouble((Double) v);
+            } else if (v instanceof Boolean) {
                 buf.appendByte(TYPE_BOOLEAN).appendByte((byte) ((Boolean) v ? 1 : 0));
-            }
-            if(v instanceof String){
-                buf.appendByte(TYPE_STRING).appendString((String)v);
+            } else if (v instanceof String) {
+                buf.appendByte(TYPE_STRING).appendString((String) v);
             }
         }
     }
