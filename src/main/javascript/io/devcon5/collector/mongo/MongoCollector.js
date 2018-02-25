@@ -44,7 +44,7 @@ vertx.setPeriodic(config.interval, function (timerId) {
                     if (dbStats_err == null) {
                         eb.publish(DIGEST_ADDR, mapDBStats(dbStats, tags));
                     } else {
-                        console.error("Server status failed " + dbStats_err);
+                        console.error("collecting dbStats failed " + dbStats_err);
                     }
                 });
                 /*
@@ -58,7 +58,7 @@ vertx.setPeriodic(config.interval, function (timerId) {
                             tags.ns = stats.ns;
                             eb.publish(DIGEST_ADDR, mapColStats(stats, tags));
                         } else {
-                            console.error("Server status failed " + status_err);
+                            console.error("colLStats failed for '" + colName + "' : " + status_err);
                         }
                     });
                 });
