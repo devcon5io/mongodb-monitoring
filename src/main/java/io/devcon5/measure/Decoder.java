@@ -17,5 +17,5 @@ public interface Decoder<T> {
      * @return
      *  the decoded measurement. Must not be null.
      */
-    Measurement decode(T encodedMeasurement);
+    Measurement[] decode(T encodedMeasurement);
 }

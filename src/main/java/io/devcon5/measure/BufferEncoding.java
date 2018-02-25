@@ -1,7 +1,9 @@
 package io.devcon5.measure;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import io.vertx.core.buffer.Buffer;
 
@@ -17,6 +19,7 @@ public class BufferEncoding {
     private static final byte TYPE_DOUBLE = (byte) 0x04;
     private static final byte TYPE_BOOLEAN = (byte) 0x05;
     private static final byte TYPE_STRING = (byte) 0x06;
+    private static final byte LEADIN = (byte) 0x00;
     private static final byte ASSIGN = (byte) 0xfa;
     private static final byte SEPARATOR = (byte) 0xfd;
     private static final byte GROUP_SEPARATOR = (byte) 0xfe;
@@ -34,26 +37,57 @@ public class BufferEncoding {
     private static class BufferEncoder implements Encoder<Buffer> {
 
         @Override
-        public Buffer encode(Measurement m) {
+        public Buffer encode(Measurement... measurements) {
 
-            final Buffer buf = Buffer.buffer(64);
+            final Buffer buf = Buffer.buffer(64 * measurements.length);
 
-            buf.appendString(m.name).appendByte(GROUP_SEPARATOR);
-            buf.appendLong(m.timestamp).appendByte(GROUP_SEPARATOR);
-
-            m.tags.forEach((k, v) -> buf.appendString(k).appendByte(ASSIGN).appendString(v).appendByte(SEPARATOR));
-            buf.appendByte(GROUP_SEPARATOR);
-
-            m.values.forEach((k, v) -> {
-                buf.appendString(k).appendByte(ASSIGN);
-                appendValue(buf, v);
-                buf.appendByte(SEPARATOR);
-            });
-
+            for (Measurement m : measurements) {
+                writeLeadIn(buf);
+                writeName(buf, m);
+                writeTimestamp(buf, m);
+                writeTags(buf, m);
+                writeValues(buf, m);
+            }
             return buf;
         }
 
-        private void appendValue(Buffer buf, Object v) {
+        private void writeLeadIn(final Buffer buf) {
+
+            buf.appendByte(LEADIN);
+        }
+
+        private void writeName(final Buffer buf, final Measurement m) {
+
+            buf.appendString(m.name)
+               .appendByte(GROUP_SEPARATOR);
+        }
+
+        private void writeTimestamp(final Buffer buf, final Measurement m) {
+
+            buf.appendLong(m.timestamp)
+               .appendByte(GROUP_SEPARATOR);
+        }
+
+        private void writeTags(final Buffer buf, final Measurement m) {
+
+            m.tags.forEach((k, v) -> buf.appendString(k)
+                                        .appendByte(ASSIGN)
+                                        .appendString(v)
+                                        .appendByte(SEPARATOR));
+            buf.appendByte(GROUP_SEPARATOR);
+        }
+
+        private void writeValues(final Buffer buf, final Measurement m) {
+
+            m.values.forEach((k, v) -> {
+                buf.appendString(k)
+                   .appendByte(ASSIGN);
+                writeValue(buf, v);
+                buf.appendByte(SEPARATOR);
+            });
+        }
+
+        private void writeValue(Buffer buf, Object v) {
 
             if (v instanceof Integer) {
                 buf.appendByte(TYPE_INTEGER).appendInt((Integer) v);
@@ -74,30 +108,51 @@ public class BufferEncoding {
     private static class BufferDecoder implements Decoder<Buffer> {
 
         @Override
-        public Measurement decode(Buffer buf) {
+        public Measurement[] decode(Buffer buf) {
 
-            int start = 0, end;
-            end = findNext(buf, start, GROUP_SEPARATOR);
-            final String name = buf.getString(start, end);
-            start = end + 1;
+            final List<Measurement> measurements = new ArrayList<>();
 
-            final long timestamp = buf.getLong(start);
-            start = start + 8 + 1;
+            int start = 0;
+            while (start < buf.length()) {
+                start = parseAndAddMeasurement(buf, start, measurements::add);
+            }
 
-            end = findNext(buf, start, GROUP_SEPARATOR);
-            final Map<String, String> tags = parseTags(buf, start, end);
-            start = end + 1;
-
-            final Map<String, Object> values = parseValues(buf, start, buf.length());
-
-            return new Measurement(name, timestamp, tags, values);
+            return measurements.toArray(new Measurement[0]);
         }
 
-        private Map<String, String> parseTags(Buffer buf, int start, int end) {
+        private int parseAndAddMeasurement(final Buffer buf, int start, final Consumer<Measurement> callback) {
 
-            Map<String, String> tags = new HashMap<>();
+            final Measurement.Builder builder = Measurement.builder();
+
+            start = findNext(buf, start, LEADIN) + 1;
+            start = parseName(buf, start, builder::name);
+            start = parseTimestamp(buf, start, builder::timestamp);
+            start = parseTags(buf, start, builder::tag);
+            start = parseValues(buf, start, builder::value);
+
+            callback.accept(builder.build());
+
+            return start;
+        }
+
+        private int parseName(final Buffer buf, int start, final Consumer<String> nameCallback) {
+
+            final int end = findNext(buf, start, GROUP_SEPARATOR);
+            nameCallback.accept(buf.getString(start, end));
+            return end + 1;
+        }
+
+        private int parseTimestamp(final Buffer buf, int start, final Consumer<Long> timestampCallback) {
+
+            timestampCallback.accept(buf.getLong(start));
+            return start + 8 + 1;
+        }
+
+        private int parseTags(Buffer buf, int start, final BiConsumer<String,String> tagCallback) {
 
             String key, value;
+
+            int end = findNext(buf, start, GROUP_SEPARATOR);
             int from = start, to;
 
             while (from < end) {
@@ -108,49 +163,53 @@ public class BufferEncoding {
                 to = findNext(buf, from, SEPARATOR);
                 value = buf.getString(from, to);
                 from = to + 1;
-                tags.put(key, value);
+
+                tagCallback.accept(key, value);
             }
 
-            return tags;
+            return from + 1;
         }
 
-        private Map<String, Object> parseValues(Buffer buf, int start, int end) {
+        private int parseValues(Buffer buf, int start, BiConsumer<String, Object> valueCallback) {
 
-            final Map<String, Object> values = new HashMap<>();
+            int from = start;
+            int to;
 
-            String key;
-            Object value;
-            int from = start, to;
+            //parse to the end of the buffer at maximum or to the next lead-in
+            while (from < buf.length() && buf.getByte(from) != LEADIN) {
 
-            while (from < end) {
                 to = findNext(buf, from, ASSIGN);
-                key = buf.getString(from, to);
-                from = to + 1;
 
-                to = findNext(buf, from, SEPARATOR);
-                value = parseValue(buf, from, to);
-                from = to + 1;
-                values.put(key, value);
+                final String key = buf.getString(from, to);
+
+                from = parseAndAddValue(buf, to + 1, v -> valueCallback.accept(key, v));
             }
 
-            return values;
+            return from;
         }
 
-        private Object parseValue(Buffer buf, int from, int to) {
+        private int parseAndAddValue(Buffer buf, int from, Consumer<Object> valueCallback) {
 
             switch (buf.getByte(from)) {
                 case TYPE_BOOLEAN:
-                    return buf.getByte(from + 1) == 1;
+                    valueCallback.accept(buf.getByte(from + 1) == 1);
+                    return from + 1 + 1 + 1;
                 case TYPE_INTEGER:
-                    return buf.getInt(from + 1);
+                    valueCallback.accept(buf.getInt(from + 1));
+                    return from + 1 + 4 + 1;
                 case TYPE_LONG:
-                    return buf.getLong(from + 1);
+                    valueCallback.accept(buf.getLong(from + 1));
+                    return from + 1 + 8 + 1;
                 case TYPE_FLOAT:
-                    return buf.getFloat(from + 1);
+                    valueCallback.accept(buf.getFloat(from + 1));
+                    return from + 1 + 4 + 1;
                 case TYPE_DOUBLE:
-                    return buf.getDouble(from + 1);
+                    valueCallback.accept(buf.getDouble(from + 1));
+                    return from + 1 + 8 + 1;
                 case TYPE_STRING:
-                    return buf.getString(from + 1, to);
+                    int end = findNext(buf, from + 1, SEPARATOR);
+                    valueCallback.accept(buf.getString(from + 1, end));
+                    return end + 1;
                 default:
                     throw new IllegalArgumentException("Invalid type indicator: " + buf.getByte(from));
             }

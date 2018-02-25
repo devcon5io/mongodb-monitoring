@@ -24,7 +24,8 @@ public class InfluxDigester extends AbstractVerticle implements Digester {
         this.client = InfluxClient.create(vertx, host, port).useDatabase(db);
 
         vertx.eventBus().consumer(DIGEST_ADDR, msg -> {
-            final Measurement m = dec.decode(msg.body());
+            //TODO support multiple measurments
+            final Measurement m = dec.decode(msg.body())[1];
             client.send(m, done -> {
                 if(done.succeeded()){
                     System.out.println("Stored " + m);

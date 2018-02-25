@@ -48,7 +48,8 @@ public class ArtifactoryCollectorIT {
         final Async measureReceived = context.async();
 
         vertx.eventBus().consumer(Digester.DIGEST_ADDR, msg -> {
-            Measurement m = decoder.decode((Buffer) msg.body());
+            //TODO support multiple measurements
+            Measurement m = decoder.decode((Buffer) msg.body())[0];
 
             System.out.println(m);
 

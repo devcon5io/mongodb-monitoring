@@ -3,6 +3,7 @@ package io.devcon5.measure;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -29,17 +30,18 @@ public class Measurement {
     /**
      * The actual values of these measurements. The values could be
      * <ul>
-     *     <li>Boolean</li>
-     *     <li>Integer</li>
-     *     <li>Long</li>
-     *     <li>Float</li>
-     *     <li>Double</li>
-     *     <li>String</li>
+     * <li>Boolean</li>
+     * <li>Integer</li>
+     * <li>Long</li>
+     * <li>Float</li>
+     * <li>Double</li>
+     * <li>String</li>
      * </ul>
      */
     final Map<String, Object> values;
 
     Measurement(String name, long ts, Map<String, String> tags, Map<String, Object> values) {
+
         this.name = name;
         this.timestamp = ts;
         this.tags = Collections.unmodifiableSortedMap(new TreeMap<>(tags));
@@ -47,6 +49,7 @@ public class Measurement {
     }
 
     Measurement(Measurement.Builder builder) {
+
         this.timestamp = builder.timestamp;
         this.name = builder.name;
         this.tags = Collections.unmodifiableSortedMap(new TreeMap<>(builder.tags));
@@ -60,51 +63,55 @@ public class Measurement {
 
     /**
      * The point in time of this measurement in nanoseconds since 1.1.1970
-     * @return
-     *  the timestamp in ns
+     *
+     * @return the timestamp in ns
      */
     public long getTimestamp() {
+
         return timestamp;
     }
 
     /**
      * The name of the measurment
-     * @return
-     *  a non-null, non-empty string representing this measurement
+     *
+     * @return a non-null, non-empty string representing this measurement
      */
     public String getName() {
+
         return name;
     }
 
     /**
      * The tags for categorization/calssification of the measurement.
-     * @return
-     *  an unmodifiable map containing the key-value pairs
+     *
+     * @return an unmodifiable map containing the key-value pairs
      */
     public SortedMap<String, String> getTags() {
+
         return tags;
     }
 
     /**
      * The actual values of this measurement. The values could be of the following types.
      * <ul>
-     *     <li>Boolean</li>
-     *     <li>Integer</li>
-     *     <li>Long</li>
-     *     <li>Float</li>
-     *     <li>Double</li>
-     *     <li>String</li>
+     * <li>Boolean</li>
+     * <li>Integer</li>
+     * <li>Long</li>
+     * <li>Float</li>
+     * <li>Double</li>
+     * <li>String</li>
      * </ul>
      *
-     * @return
-     *  an unmodifiable map containing the key-value pairs.
+     * @return an unmodifiable map containing the key-value pairs.
      */
     public Map<String, Object> getValues() {
+
         return values;
     }
 
     @Override
     public String toString() {
+
         final StringBuilder sb = new StringBuilder("Measurement{");
         sb.append("name='").append(name).append('\'');
         sb.append(", timestamp=").append(timestamp);
@@ -123,42 +130,31 @@ public class Measurement {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-
         final Measurement that = (Measurement) o;
-
-        if (timestamp != that.timestamp) {
-            return false;
-        }
-        if (!name.equals(that.name)) {
-            return false;
-        }
-        if (!tags.equals(that.tags)) {
-            return false;
-        }
-        return values.equals(that.values);
-
+        return timestamp == that.timestamp
+                && Objects.equals(name, that.name)
+                && Objects.equals(tags, that.tags)
+                && Objects.equals(values, that.values);
     }
 
     @Override
     public int hashCode() {
 
-        int result = (int) (timestamp ^ (timestamp >>> 32));
-        result = 31 * result + name.hashCode();
-        result = 31 * result + tags.hashCode();
-        result = 31 * result + values.hashCode();
-        return result;
+        return Objects.hash(timestamp, name, tags, values);
     }
 
     /**
      * Creates a new builder for a Measurment
-     * @return
-     *  a new, non-null builder
+     *
+     * @return a new, non-null builder
      */
     public static Builder builder() {
+
         return new Builder();
     }
 
     public static class Builder {
+
         private String name;
         private long timestamp;
         private Map<String, String> tags = new HashMap<>();
@@ -168,60 +164,85 @@ public class Measurement {
         private Map<String, String> stringValues = new HashMap<>();
 
         public Builder name(String name) {
+
             this.name = name;
             return this;
         }
 
         public Builder timestamp(long nanos) {
+
             this.timestamp = nanos;
             return this;
         }
 
         public Builder tag(String name, String value) {
+
             this.tags.put(name, value);
             return this;
         }
 
         public Builder value(String name, String value) {
+
             this.stringValues.put(name, value);
             return this;
         }
 
         public Builder value(String name, Boolean value) {
+
             this.booleanValues.put(name, value);
             return this;
         }
 
         public Builder value(String name, Integer value) {
+
             this.numberValues.put(name, value);
             return this;
         }
 
         public Builder value(String name, Long value) {
+
             this.numberValues.put(name, value);
             return this;
         }
 
         public Builder value(String name, Double value) {
+
             this.numberValues.put(name, value);
             return this;
         }
 
         public Builder value(String name, Float value) {
+
             this.numberValues.put(name, value);
             return this;
+        }
+
+        //method is only required for decoding
+        Builder value(final String name, final Object rawValue) {
+
+            if (rawValue instanceof Number) {
+                this.numberValues.put(name, (Number) rawValue);
+                return this;
+            } else if (rawValue instanceof Boolean) {
+                return value(name, (Boolean) rawValue);
+            } else if (rawValue instanceof String) {
+                return value(name, (String) rawValue);
+            }
+            throw new IllegalArgumentException("Unsupported value type " + (rawValue == null
+                                                                            ? "null"
+                                                                            : rawValue.getClass()));
         }
 
         /**
          * Validates the collected parameters and creates the Measurement.
          *
+         * @return a non-null Measurement
          *
-         * @return
-         *  a non-null Measurement
          * @throws java.lang.IllegalArgumentException
-         *  if the validation of the parameters failed
+         *         if the validation of the parameters failed
          */
         public Measurement build() {
+
             if (name == null || name.trim().isEmpty()) {
                 throw new IllegalArgumentException("name is not set");
             }
@@ -237,7 +258,6 @@ public class Measurement {
 
             return new Measurement(this);
         }
-
     }
 }
 
