@@ -2,27 +2,20 @@
  * Copyright (C) 2017 DevCon5 GmbH
  */
 
+var eb = vertx.eventBus();
+var config = Vertx.currentContext().config();
+var DIGEST_ADDR = Java.type('io.devcon5.measure.Digester').DIGEST_ADDR;
+
 var MongoClient = require("vertx-mongo-js/mongo_client");
 
-var config = Vertx.currentContext().config();
-
 ////// init Mongo Clients
-var mongoClients = config.mongoServer.map(function (config) {
+var mongoClients = config.servers.map(function (config) {
     return {
         client: MongoClient.createNonShared(vertx, config),
         collections: config.collections,
-        dbName : config.db_name
+        dbName: config.db_name
     };
 });
-
-///// Influx DB Configuration
-var influxDB = {
-    http: vertx.createHttpClient(),
-    post: function (data) {
-        influxDB.http.post(config.influx.port, config.influx.host, "/write?db=" + config.influx.dbname, responseHandler)
-            .end(Array.isArray(data) ? data.join("\n") : data);
-    }
-};
 
 vertx.setPeriodic(config.interval, function (timerId) {
 
@@ -42,17 +35,16 @@ vertx.setPeriodic(config.interval, function (timerId) {
                     storageEngine: status.storageEngine.name
                 };
 
-                //post to influx
-                influxDB.post(mapServerStatus(status, tags));
+                eb.publish(DIGEST_ADDR, mapServerStatus(status, tags));
                 tags.dbname = mongo.dbName;
                 /*
                  * Collect DB Statistics from the current database
                  */
                 mongo.client.runCommand("dbStats", {"dbStats": 1}, function (dbStats, dbStats_err) {
                     if (dbStats_err == null) {
-                        influxDB.post(mapDBStats(dbStats, tags));
+                        eb.publish(DIGEST_ADDR, mapDBStats(dbStats, tags));
                     } else {
-                        console.error("Server status failed" + dbStats_err);
+                        console.error("collecting dbStats failed " + dbStats_err);
                     }
                 });
                 /*
@@ -64,9 +56,9 @@ vertx.setPeriodic(config.interval, function (timerId) {
                             //add additional stats
                             tags.colName = colName;
                             tags.ns = stats.ns;
-                            influxDB.post(mapColStats(stats, tags));
+                            eb.publish(DIGEST_ADDR, mapColStats(stats, tags));
                         } else {
-                            console.error("Server status failed" + status_err);
+                            console.error("colLStats failed for '" + colName + "' : " + status_err);
                         }
                     });
                 });
@@ -76,7 +68,8 @@ vertx.setPeriodic(config.interval, function (timerId) {
         });
     });
 });
-console.log("ServerStatus verticle started")
+console.log("MongoCollector verticle started")
+
 /**
  * Function to map serverStatus document to a datapoints and tags. The result is an object with the datapoints
  * property and a tags property
@@ -87,16 +80,11 @@ function mapServerStatus(status, tags) {
 
     var timestamp = new Date(status.localTime.$date).getTime() * 1000000 //ns;
 
-    return [
+    var ret = [
         measure("connections", tags, timestamp, {
             "current": status.connections.current,
             "available": status.connections.available,
             "totalCreated": status.connections.totalCreated
-        }),
-        measure("pagefile", tags, timestamp, {
-            "usage": status.extra_info.usagePageFileMB,
-            "available": status.extra_info.totalPageFileMB,
-            "total": status.extra_info.totalPageFileMB
         }),
         measure("mem", tags, timestamp, {
             "resident": status.mem.resident,
@@ -130,8 +118,16 @@ function mapServerStatus(status, tags) {
             "transfer_cache_free_bytes": status.tcmalloc.tcmalloc["transfer_cache_free_bytes"],
             "thread_cache_free_bytes": status.tcmalloc.tcmalloc["thread_cache_free_bytes"],
             "aggressive_memory_decommit": status.tcmalloc.tcmalloc["aggressive_memory_decommit"]
-        })
-    ];
+        })];
+
+    if(status.extra_info.usagePageFileMB){
+        ret.push(measure("pagefile", tags, timestamp, {
+            "usage": status.extra_info.usagePageFileMB,
+            "available": status.extra_info.totalPageFileMB,
+            "total": status.extra_info.totalPageFileMB
+        }));
+    }
+    return ret;
 }
 
 /**
@@ -142,7 +138,7 @@ function mapServerStatus(status, tags) {
  *  tags object to be used for the datapoints. Additional tags are added
  * @returns {*[]} an array of datapoint strings
  */
-function mapColStats(stats, tags ) {
+function mapColStats(stats, tags) {
 
     var timestamp = new Date().getTime() * 1000000 //ns;
 
@@ -153,8 +149,7 @@ function mapColStats(stats, tags ) {
             "average_obj_size": stats.avgObjSize,
             "storageSize": stats.storageSize,
             "totalIndexSize": stats.totalIndexSize
-        })
-    ];
+        })];
 }
 
 /**
@@ -165,7 +160,7 @@ function mapColStats(stats, tags ) {
  *  tags object to be used for the datapoints. Additional tags are added
  * @returns {*[]} an array of datapoint strings
  */
-function mapDBStats(stats, tags ) {
+function mapDBStats(stats, tags) {
 
     var timestamp = new Date().getTime() * 1000000 //ns;
 
@@ -179,55 +174,20 @@ function mapDBStats(stats, tags ) {
             "numExtents": stats.numExtents,
             "indexes": stats.indexes,
             "indexSize": stats.indexSize,
-        })
-    ];
+        })];
 }
 
 
 ////// Helper functions
 
-/**
- * Creates a Influx LineProtocol measure of the format
- * <pre>
- *     measure_name[,tag_name=tag_value]* field_name=field_value[,field_name=field_value]* timestamp
- * </pre>
- * @param name
- *  the name of the measure, used for measure_name
- * @param tags
- *  an object with tags. Each property name is used as tag_name and the according value as tag_value
- * @param timestamp
- *  the timestamp in nanoseconds
- * @param fieldObj
- *  on object withe fields. Each property name is used as field_name and the according value as field_value
- * @returns {string}
- *  a string representing a measure for influx
- */
+
 function measure(name, tags, timestamp, fieldObj) {
-    return name + "," + flatten(tags) + " " + flatten(fieldObj) + " " + timestamp;
+
+    return {
+        name: name,
+        timestamp: timestamp,
+        tags: tags,
+        values: fieldObj
+    };
 }
 
-/**
- * Flattens an object into a key=value pair representation, with each pair separated by a comma
- * @param obj
- *  an object, i.e. { "aKey" : "aValue", "bKey":"bValue"}
- * @returns {string}
- *  a comma separated string of the key-value pairs , i.e. aKey=aValue,bKey=bValue
- */
-function flatten(obj) {
-    var result = [];
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            result.push(key + "=" + obj[key]);
-        }
-    }
-    return result.join(",");
-}
-
-function responseHandler(response) {
-    if (response.statusCode() >= 400) {
-        console.warn("< " + (response.statusCode() + " " + response.statusMessage()));
-        response.bodyHandler(function (data) {
-            console.warn(data);
-        })
-    }
-}
