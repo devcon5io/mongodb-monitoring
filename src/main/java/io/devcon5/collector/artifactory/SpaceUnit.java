@@ -1,4 +1,4 @@
-package io.devcon5.units;
+package io.devcon5.collector.artifactory;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

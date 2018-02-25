@@ -8,7 +8,6 @@ import io.devcon5.measure.BinaryEncoding;
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Encoder;
 import io.devcon5.measure.Measurement;
-import io.devcon5.units.SpaceUnit;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;

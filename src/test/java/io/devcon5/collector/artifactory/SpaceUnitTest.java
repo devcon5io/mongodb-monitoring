@@ -1,8 +1,8 @@
-package io.devcon5.units;
+package io.devcon5.collector.artifactory;
+
+import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 public class SpaceUnitTest {
 
