@@ -3,6 +3,7 @@ package io.devcon5.digester.influx;
 import java.util.Collection;
 import java.util.Collections;
 
+import io.devcon5.measure.Encoder;
 import io.devcon5.measure.Measurement;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -19,10 +20,12 @@ public class InfluxClient {
     public static final String DEFAULT_HOST = "localhost";
 
     private final WebClient webclient;
+    private final Encoder<Buffer> encoder;
     private String database;
 
     InfluxClient(WebClient webclient) {
         this.webclient = webclient;
+        this.encoder = LineProtocol.encoder();
     }
 
     public InfluxClient send(Measurement m,Handler<AsyncResult<Void>> handler) {
@@ -43,9 +46,10 @@ public class InfluxClient {
         this.webclient.post("/write")
                       .addQueryParam("db", database)
                       .putHeader("Content-Type", "application/x-www-form-urlencoded")
-                      .sendBuffer(LineProtocol.toBuffer(m), resultHandler(handler));
+                      .sendBuffer(encoder.encode(m), resultHandler(handler));
         return this;
     }
+
     private String getDatabase() {
         if(this.database == null){
             throw new IllegalStateException("no database set");

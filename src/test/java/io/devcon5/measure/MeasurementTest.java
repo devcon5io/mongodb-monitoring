@@ -55,13 +55,13 @@ public class MeasurementTest {
                                    .value("test", 123)
                                    .build();
 
-
         m.getTags().clear();
 
     }
 
     @Test
     public void getValues() throws Exception {
+
         Measurement m = Measurement.builder()
                                    .name("name")
                                    .timestamp(123)
@@ -73,7 +73,7 @@ public class MeasurementTest {
                                    .value("string", "123")
                                    .build();
 
-        Map<String,Object> values = m.getValues();
+        Map<String, Object> values = m.getValues();
 
         assertEquals(Integer.valueOf(123), values.get("int"));
         assertEquals(Long.valueOf(123L), values.get("long"));
@@ -85,6 +85,7 @@ public class MeasurementTest {
 
     @Test(expected = UnsupportedOperationException.class)
     public void getValues_unmodifiable() throws Exception {
+
         Measurement m = Measurement.builder()
                                    .name("name")
                                    .timestamp(123)
@@ -100,6 +101,7 @@ public class MeasurementTest {
 
     @Test
     public void test_toString() throws Exception {
+
         Measurement m = Measurement.builder()
                                    .name("name")
                                    .timestamp(123)
@@ -113,38 +115,48 @@ public class MeasurementTest {
                                    .value("string", "123")
                                    .build();
         String s = m.toString();
-        assertEquals("Measurement{name='name', timestamp=123, tags={tag1=t1, tag2=t2}, values={boolean=true, float=123.1, string=123, double=123.1, int=123, long=123}}", s);
+
+        //values are sorted by name
+        assertEquals(
+                "Measurement{name='name', timestamp=123, tags={tag1=t1, tag2=t2}, values={boolean=true, double=123.1, float=123.1, int=123, long=123, string=123}}",
+                s);
     }
 
     @Test
     public void builder() throws Exception {
+
         assertNotNull(Measurement.builder());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void builder_noName_exception() throws Exception {
-        assertNotNull(Measurement.builder().timestamp(123).value("val",123).build());
+
+        assertNotNull(Measurement.builder().timestamp(123).value("val", 123).build());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void builder_emptyName_exception() throws Exception {
-        assertNotNull(Measurement.builder().name("").timestamp(123).value("val",123).build());
+
+        assertNotNull(Measurement.builder().name("").timestamp(123).value("val", 123).build());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void builder_negativeTimestamp_exception() throws Exception {
-        assertNotNull(Measurement.builder().name("test").timestamp(-123).value("val",123).build());
+
+        assertNotNull(Measurement.builder().name("test").timestamp(-123).value("val", 123).build());
     }
 
     @Test
     public void builder_noTimeStamp_default() throws Exception {
+
         long now = System.currentTimeMillis();
-        Measurement m = Measurement.builder().name("test").value("val",123).build();
+        Measurement m = Measurement.builder().name("test").value("val", 123).build();
         assertTrue(m.getTimestamp() >= now * 1_000_000);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void builder_noValues_exception() throws Exception {
+
         assertNotNull(Measurement.builder().name("test").timestamp(-123).build());
     }
 

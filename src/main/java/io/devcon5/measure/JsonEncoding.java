@@ -1,6 +1,7 @@
 package io.devcon5.measure;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import io.vertx.core.json.JsonArray;
@@ -21,7 +22,7 @@ public class JsonEncoding {
     private static class JsonEncoder implements Encoder<JsonArray>{
 
         @Override
-        public JsonArray encode(final Measurement... m) {
+        public JsonArray encode(final Collection<Measurement> m) {
 
             return new JsonArray(io.vertx.core.json.Json.encode(m));
         }

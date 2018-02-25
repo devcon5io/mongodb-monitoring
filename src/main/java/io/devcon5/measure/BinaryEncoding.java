@@ -1,6 +1,7 @@
 package io.devcon5.measure;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -37,9 +38,9 @@ public class BinaryEncoding {
     private static class BufferEncoder implements Encoder<Buffer> {
 
         @Override
-        public Buffer encode(Measurement... measurements) {
+        public Buffer encode(Collection<Measurement> measurements) {
 
-            final Buffer buf = Buffer.buffer(64 * measurements.length);
+            final Buffer buf = Buffer.buffer(64 * measurements.size());
 
             for (Measurement m : measurements) {
                 writeLeadIn(buf);
