@@ -1,10 +1,13 @@
 package io.devcon5.digester.influx;
 
+import java.util.Arrays;
+
 import io.devcon5.measure.BufferEncoding;
 import io.devcon5.measure.Decoder;
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Measurement;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 public class InfluxDigester extends AbstractVerticle implements Digester {
@@ -19,16 +22,15 @@ public class InfluxDigester extends AbstractVerticle implements Digester {
         final int port = config.getInteger("port", 8086);
         final String db = config.getString("database");
 
-        final Decoder dec = BufferEncoding.decoder();
+        final Decoder<Buffer> dec = BufferEncoding.decoder();
 
         this.client = InfluxClient.create(vertx, host, port).useDatabase(db);
 
         vertx.eventBus().consumer(DIGEST_ADDR, msg -> {
-            //TODO support multiple measurments
-            final Measurement m = dec.decode(msg.body())[1];
-            client.send(m, done -> {
+            final Measurement[] m = dec.decode((Buffer)msg.body());
+            client.send(Arrays.asList(m), done -> {
                 if(done.succeeded()){
-                    System.out.println("Stored " + m);
+                    System.out.println("Stored " + Arrays.toString(m));
                 } else {
                     done.cause().printStackTrace();
                 }

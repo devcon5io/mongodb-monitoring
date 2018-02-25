@@ -1,5 +1,6 @@
 package io.devcon5.collector.artifactory;
 
+import java.util.Arrays;
 import java.util.Base64;
 
 import io.devcon5.Docker;
@@ -48,12 +49,10 @@ public class ArtifactoryCollectorIT {
         final Async measureReceived = context.async();
 
         vertx.eventBus().consumer(Digester.DIGEST_ADDR, msg -> {
-            //TODO support multiple measurements
-            Measurement m = decoder.decode((Buffer) msg.body())[0];
+            Measurement[] m = decoder.decode((Buffer) msg.body());
+            System.out.println(Arrays.asList(m));
 
-            System.out.println(m);
-
-            context.assertEquals("fileStorage", m.getName());
+            context.assertEquals("fileStorage", m[0].getName());
             measureReceived.complete();
         });
     }
