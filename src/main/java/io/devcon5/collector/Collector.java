@@ -56,7 +56,7 @@ public class Collector extends AbstractVerticle {
 
         String type = config.getString("type");
 
-        LOG.info("Deploying {} of type {}", name, type);
+        LOG.info("Deploying {} ({})", name, type);
 
         vertx.deployVerticle(type, new DeploymentOptions().setConfig(config));
     }
