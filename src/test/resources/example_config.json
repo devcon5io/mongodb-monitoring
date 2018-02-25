@@ -1,0 +1,37 @@
+{
+  "collector": {
+    "mongo": {
+      "type": "js:io/devcon5/collector/mongo/MongoCollector.js",
+      "interval": 1000,
+      "servers" : [
+        {
+          "host": "localhost",
+          "port": 27017,
+          "db_name": "test",
+          "collections": [
+            "example"
+          ]
+        }
+      ]
+    },
+    "artifactory": {
+      "type": "io.devcon5.collector.artifactory.ArtifactoryCollector",
+      "interval": 1000,
+      "servers" : [
+        {
+          "host": "localhost",
+          "port": 8081,
+          "auth": "Basic YWRtaW46cGFzc3dvcmQ="
+        }
+      ]
+    }
+  },
+  "digester": {
+    "influx": {
+      "type": "io.devcon5.digester.influx.InfluxDigester",
+      "host": "localhost",
+      "port": 8086,
+      "database": "test"
+    }
+  }
+}

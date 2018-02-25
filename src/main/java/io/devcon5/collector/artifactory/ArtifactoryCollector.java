@@ -53,7 +53,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
     @Override
     public void start() throws Exception {
 
-        final JsonObject config = config();
+        //TODO support multiple servers
+        final JsonObject config = config().getJsonArray("servers").getJsonObject(0);
 
         this.artifactoryHost = config.getString("host", "localhost");
         this.contextRoot = config.getString("contextRoot", "/artifactory/");

@@ -9,7 +9,7 @@ var DIGEST_ADDR = Java.type('io.devcon5.measure.Digester').DIGEST_ADDR;
 var MongoClient = require("vertx-mongo-js/mongo_client");
 
 ////// init Mongo Clients
-var mongoClients = config.mongoServer.map(function (config) {
+var mongoClients = config.servers.map(function (config) {
     return {
         client: MongoClient.createNonShared(vertx, config),
         collections: config.collections,

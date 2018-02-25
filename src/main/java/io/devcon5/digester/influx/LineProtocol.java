@@ -43,7 +43,7 @@ public class LineProtocol {
                     buf.appendString("i");
                 }
             });
-
+            buf.appendString(" ");
             buf.appendString(String.valueOf(m.getTimestamp()));
             buf.appendString("\n");
             return buf;

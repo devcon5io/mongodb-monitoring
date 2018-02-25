@@ -1,13 +1,18 @@
 package io.devcon5.digester.influx;
 
+import static org.slf4j.LoggerFactory.getLogger;
+
 import java.util.Arrays;
 
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
 
 public class InfluxDigester extends AbstractVerticle implements Digester {
+
+    private static final Logger LOG = getLogger(InfluxDigester.class);
 
     private InfluxClient client;
 
@@ -23,8 +28,10 @@ public class InfluxDigester extends AbstractVerticle implements Digester {
         vertx.eventBus().consumer(DIGEST_ADDR, msg -> {
             final Measurement[] m = decode(msg.body());
             client.send(Arrays.asList(m), done -> {
-                if(done.succeeded()){
-                    System.out.println("Stored " + Arrays.toString(m));
+                if (done.succeeded()) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Stored {}", Arrays.toString(m));
+                    }
                 } else {
                     done.cause().printStackTrace();
                 }
