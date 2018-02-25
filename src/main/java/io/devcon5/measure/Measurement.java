@@ -40,14 +40,6 @@ public class Measurement {
      */
     final Map<String, Object> values;
 
-    Measurement(String name, long ts, Map<String, String> tags, Map<String, Object> values) {
-
-        this.name = name;
-        this.timestamp = ts;
-        this.tags = Collections.unmodifiableSortedMap(new TreeMap<>(tags));
-        this.values = Collections.unmodifiableMap(values);
-    }
-
     Measurement(Measurement.Builder builder) {
 
         this.timestamp = builder.timestamp;
@@ -58,7 +50,7 @@ public class Measurement {
         values.putAll(builder.booleanValues);
         values.putAll(builder.numberValues);
         values.putAll(builder.stringValues);
-        this.values = Collections.unmodifiableMap(values);
+        this.values = Collections.unmodifiableMap(new TreeMap<>(values));
     }
 
     /**
@@ -218,7 +210,7 @@ public class Measurement {
         }
 
         //method is only required for decoding
-        Builder value(final String name, final Object rawValue) {
+        public Builder value(final String name, final Object rawValue) {
 
             if (rawValue instanceof Number) {
                 this.numberValues.put(name, (Number) rawValue);

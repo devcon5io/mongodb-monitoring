@@ -4,7 +4,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import io.devcon5.measure.BufferEncoding;
+import io.devcon5.measure.BinaryEncoding;
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Encoder;
 import io.devcon5.measure.Measurement;
@@ -63,7 +63,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
         final long interval = config.getLong("interval", 60000L);
 
         this.webclient = WebClient.create(vertx);
-        this.encoder = BufferEncoding.encoder();
+        this.encoder = BinaryEncoding.encoder();
 
         vertx.setPeriodic(interval, this::pollStatus);
     }

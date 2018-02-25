@@ -11,7 +11,7 @@ import io.vertx.core.buffer.Buffer;
  * Encoding do write and read a measurement from a Vert.x buffer. Unlike the JsonFormat, the buffer encoding
  * is more efficient toward space requirement.
  */
-public class BufferEncoding {
+public class BinaryEncoding {
 
     private static final byte TYPE_INTEGER = (byte) 0x01;
     private static final byte TYPE_LONG = (byte) 0x02;

@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Base64;
 
 import io.devcon5.Docker;
-import io.devcon5.measure.BufferEncoding;
+import io.devcon5.measure.BinaryEncoding;
 import io.devcon5.measure.Decoder;
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Measurement;
@@ -32,7 +32,7 @@ public class ArtifactoryCollectorIT {
                                                        .withExposedPorts(8081)
                                                        .waitingFor(Wait.forHttp("/artifactory/api/application.wadl"));
 
-    private Decoder<Buffer> decoder = BufferEncoding.decoder();
+    private Decoder<Buffer> decoder = BinaryEncoding.decoder();
 
     @Test
     public void should_fetch_and_publish_measurement(TestContext context) throws Exception {
