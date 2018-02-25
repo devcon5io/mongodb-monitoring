@@ -15,6 +15,19 @@ public interface Digester {
      */
     String DIGEST_ADDR = "persist";
 
+    /**
+     * Decodes an encoded measure using an appropriate decoder.
+     * The default implementation supports the following types:
+     * <ul>
+     *     <li>{@link io.vertx.core.buffer.Buffer} - {@link io.devcon5.measure.BinaryEncoding}</li>
+     *     <li>{@link io.vertx.core.json.JsonArray - {@link io.devcon5.measure.JsonEncoding}}</li>
+     * </ul>
+     * @param o
+     *  the measurements in a specific encoding
+     *
+     * @return
+     *  the decoded measurements
+     */
     default Measurement[] decode(Object o){
         if(o instanceof Buffer){
             return BinaryEncoding.decoder().decode((Buffer)o);
