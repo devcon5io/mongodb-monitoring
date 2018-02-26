@@ -26,7 +26,7 @@ vertx.setPeriodic(config.interval, function (timerId) {
          */
         mongo.client.runCommand("serverStatus", {"serverStatus": 1}, function (status, status_err) {
 
-            if (status_err == null) {
+            if (status_err === null) {
 
                 //get the meta-data for this server, also used for colStats and dbStats
                 var tags = {
@@ -41,7 +41,7 @@ vertx.setPeriodic(config.interval, function (timerId) {
                  * Collect DB Statistics from the current database
                  */
                 mongo.client.runCommand("dbStats", {"dbStats": 1}, function (dbStats, dbStats_err) {
-                    if (dbStats_err == null) {
+                    if (dbStats_err === null) {
                         eb.publish(DIGEST_ADDR, mapDBStats(dbStats, tags));
                     } else {
                         console.error("collecting dbStats failed " + dbStats_err);
@@ -52,7 +52,7 @@ vertx.setPeriodic(config.interval, function (timerId) {
                  */
                 mongo.collections.forEach(function (colName) {
                     mongo.client.runCommand("collStats", {"collStats": colName}, function (stats, stats_err) {
-                        if (stats_err == null) {
+                        if (stats_err === null) {
                             //add additional stats
                             tags.colName = colName;
                             tags.ns = stats.ns;
