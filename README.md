@@ -42,7 +42,7 @@ This data can be visualized with Grafana.
 
 All used tools and frameworks are Open Source.
 
-# Setup and Run
+### Setup and Run
 
 1. Download and install [Influx DB](https://www.influxdata.com/time-series-platform/influxdb/)
 2. Initialize the timeseries DB by creating a database and configure a retention policy
