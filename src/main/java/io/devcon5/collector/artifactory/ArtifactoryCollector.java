@@ -19,6 +19,7 @@
 package io.devcon5.collector.artifactory;
 
 import java.util.Base64;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +34,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import org.slf4j.Logger;
+
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Collector that periodically polls the artifactory server to fetch current storage statistics.
@@ -57,6 +61,8 @@ import io.vertx.ext.web.client.WebClient;
  * </ul>
  */
 public class ArtifactoryCollector extends AbstractVerticle {
+
+    private static final Logger LOG = getLogger(ArtifactoryCollector.class);
 
     private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+))?\\s(KB|MB|GB|TB)");
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s*%");
@@ -95,8 +101,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private void pollStatus(long timerId) {
 
         HttpRequest<Buffer> request = webclient.get(artifactoryPort,
-                                                    artifactoryHost,
-                                                    contextRoot + "ui/storagesummary");
+                artifactoryHost,
+                contextRoot + "api/storagesummary");
         if (this.authorization != null) {
             request.putHeader("Authorization", authorization);
         }
@@ -106,26 +112,28 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private void processResult(AsyncResult<HttpResponse<Buffer>> resp) {
 
         if (resp.succeeded()) {
-            Measurement m = processStatistics(resp.result().bodyAsJsonObject());
-            vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m));
+            processStatistics(resp.result().bodyAsJsonObject())
+                    .ifPresent(m -> vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m)));
         } else {
             resp.cause().printStackTrace();
         }
     }
 
-    private Measurement processStatistics(JsonObject obj) {
+    private Optional<Measurement> processStatistics(JsonObject obj) {
+        if(LOG.isDebugEnabled()){
+            LOG.info("Processing statistics {}", obj.encodePrettily());
+        }
+        return Optional.ofNullable(obj.getJsonObject("fileStoreSummary"))
+                       .map(fsSummary -> Measurement.builder()
+                                                    .name("fileStorage")
+                                                    .tag("server", "artifactory")
+                                                    .value("totalSpace", parseSpace(fsSummary.getString("totalSpace")))
+                                                    .value("usedSpace", parseSpace(fsSummary.getString("usedSpace")))
+                                                    .value("usedSpacePercent", parseSpacePercent(fsSummary.getString("usedSpace")))
+                                                    .value("freeSpace", parseSpace(fsSummary.getString("freeSpace")))
+                                                    .value("freeSpacePercent", parseSpacePercent(fsSummary.getString("freeSpace")))
+                                                    .build());
 
-        JsonObject fsSummary = obj.getJsonObject("fileStoreSummary");
-
-        return Measurement.builder()
-                          .name("fileStorage")
-                          .tag("server", "artifactory")
-                          .value("totalSpace", parseSpace(fsSummary.getString("totalSpace")))
-                          .value("usedSpace", parseSpace(fsSummary.getString("usedSpace")))
-                          .value("usedSpacePercent", parseSpacePercent(fsSummary.getString("usedSpace")))
-                          .value("freeSpace", parseSpace(fsSummary.getString("freeSpace")))
-                          .value("freeSpacePercent", parseSpacePercent(fsSummary.getString("freeSpace")))
-                          .build();
     }
 
     private Double parseSpacePercent(String space) {
