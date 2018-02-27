@@ -97,7 +97,7 @@ vertx from any path
 6. Start Vertx using the configuration and deploy the Verticle
 
     ```bash
-    vertx run -conf config.json -cp universalcollector.jar
+    vertx run -conf config.json -cp universalcollector.jar io.devcon5.collector.Collector
     ```
 
 Note, this solution provides only basic capabilities but may be a good starting point for building your own custom 
