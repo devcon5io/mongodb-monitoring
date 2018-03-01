@@ -69,7 +69,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
 
     private static final Logger LOG = getLogger(ArtifactoryCollector.class);
 
-    private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+))?\\s(bytes|B|KB|MB|GB|TB)");
+    private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s(bytes|B|KB|MB|GB|TB)");
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s*%");
     private String artifactoryHost;
     private String contextRoot;
@@ -163,8 +163,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
         parseSpace(json, "usedSpace", mb::value);
         parseSpace(json, "freeSpace", mb::value);
 
-        parsePercent(json, "freeSpacePercent", mb::value);
-        parsePercent(json, "usedSpacePercent", mb::value);
+        mb.value("freeSpacePercent", parsePercent(json.getString("freeSpace")));
+        mb.value("usedSpacePercent", parsePercent(json.getString("usedSpace")));
 
         return mb.build();
     }
