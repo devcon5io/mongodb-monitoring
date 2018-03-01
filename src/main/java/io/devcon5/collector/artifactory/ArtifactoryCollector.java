@@ -18,8 +18,12 @@
 
 package io.devcon5.collector.artifactory;
 
-import java.util.Base64;
-import java.util.Optional;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +34,7 @@ import io.devcon5.measure.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
@@ -112,47 +117,145 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private void processResult(AsyncResult<HttpResponse<Buffer>> resp) {
 
         if (resp.succeeded()) {
-            processStatistics(resp.result().bodyAsJsonObject())
-                    .ifPresent(m -> vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m)));
+            Collection<Measurement> m = processStatistics(resp.result().bodyAsJsonObject());
+            vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m));
         } else {
             resp.cause().printStackTrace();
         }
     }
 
-    private Optional<Measurement> processStatistics(JsonObject obj) {
-        if(LOG.isDebugEnabled()){
-            LOG.info("Processing statistics {}", obj.encodePrettily());
+    private Collection<Measurement> processStatistics(JsonObject obj) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Processing statistics {}", obj.encodePrettily());
         }
-        return Optional.ofNullable(obj.getJsonObject("fileStoreSummary"))
-                       .map(fsSummary -> Measurement.builder()
-                                                    .name("fileStorage")
-                                                    .tag("server", "artifactory")
-                                                    .value("totalSpace", parseSpace(fsSummary.getString("totalSpace")))
-                                                    .value("usedSpace", parseSpace(fsSummary.getString("usedSpace")))
-                                                    .value("usedSpacePercent", parseSpacePercent(fsSummary.getString("usedSpace")))
-                                                    .value("freeSpace", parseSpace(fsSummary.getString("freeSpace")))
-                                                    .value("freeSpacePercent", parseSpacePercent(fsSummary.getString("freeSpace")))
-                                                    .build());
+        final List<Measurement> ms = new ArrayList<>();
+
+        mapFileStorageStats(obj.getJsonObject("fileStoreSummary"), ms::add);
+        mapBinaryStats(obj.getJsonObject("binariesSummary"), ms::add);
+        mapRepositoryStats(obj.getJsonArray("repositoriesSummaryList"), ms::add);
+
+        return ms;
+    }
+
+    private void mapFileStorageStats(JsonObject jsonObject, Consumer<Measurement> handler) {
+        Optional.ofNullable(jsonObject).map(this::createFileStorageStats).ifPresent(handler);
+    }
+
+    private void mapBinaryStats(JsonObject jsonObject, Consumer<Measurement> handler) {
+        Optional.ofNullable(jsonObject).map(this::createBinaryStats).ifPresent(handler);
+    }
+
+    private void mapRepositoryStats(JsonArray jsonArray, Consumer<Measurement> handler) {
+        if (jsonArray == null) {
+            return;
+        }
+        jsonArray.stream().map(JsonObject.class::cast)
+                 .map(this::mapRepositoryStats).forEach(handler);
 
     }
 
-    private Double parseSpacePercent(String space) {
+    private Measurement createFileStorageStats(JsonObject json) {
+        Measurement.Builder mb = Measurement.builder()
+                                            .name("binaries")
+                                            .tag("server", "artifactory");
 
-        Matcher m = PERCENT_PATTERN.matcher(space);
+        parseSpace(json, "totalSpace", mb::value);
+        parseSpace(json, "usedSpace", mb::value);
+        parseSpace(json, "freeSpace", mb::value);
+
+        parsePercent(json, "freeSpacePercent", mb::value);
+        parsePercent(json, "usedSpacePercent", mb::value);
+
+        return mb.build();
+    }
+
+    private Measurement createBinaryStats(JsonObject json) {
+        Measurement.Builder mb = Measurement.builder()
+                                            .name("binaries")
+                                            .tag("server", "artifactory");
+        parseInteger(json, "binariesCount", mb::value);
+        parseInteger(json, "itemsCount", mb::value);
+        parseInteger(json, "artifactsCount", mb::value);
+
+        parseSpace(json, "binariesSize", mb::value);
+        parseSpace(json, "artifactsSize", mb::value);
+
+        parsePercent(json, "optimization", mb::value);
+
+        return mb.build();
+    }
+
+    private Measurement mapRepositoryStats(JsonObject json) {
+        Measurement.Builder mb = Measurement.builder()
+                                            .name("repositories")
+                                            .tag("server", "artifactory")
+                                            .tag("repository", json.getString("repoKey"))
+                                            .tag("repoType", json.getString("repoType"))
+                                            .tag("packageType", json.getString("packageType"));
+
+        parseInteger(json, "itemsCount", mb::value);
+        parseInteger(json, "filesCount", mb::value);
+        parseInteger(json, "foldersCount", mb::value);
+
+        parseSpace(json, "usedSpace", mb::value);
+
+        parsePercent(json, "percentage", mb::value);
+
+
+        return mb.build();
+    }
+
+    private void parseInteger(JsonObject obj, String property, BiConsumer<String, Integer> builder) {
+        Optional.ofNullable(obj.getString(property))
+                .map(this::parseInteger)
+                .ifPresent(v -> builder.accept(property, v));
+
+    }
+
+    private void parsePercent(JsonObject obj, String property, BiConsumer<String, Double> builder) {
+        Optional.ofNullable(obj.getString(property))
+                .map(this::parsePercent)
+                .ifPresent(v -> builder.accept(property, v));
+
+
+    }
+
+    private void parseSpace(JsonObject obj, String property, BiConsumer<String, Long> builder) {
+        Optional.ofNullable(obj.getString(property))
+                .map(this::parseSpace)
+                .ifPresent(v -> builder.accept(property, v));
+    }
+
+    private Integer parseInteger(String rawValue) {
+        try {
+            return NumberFormat.getNumberInstance(Locale.getDefault())
+                               .parse(rawValue)
+                               .intValue();
+        } catch (ParseException e) {
+            LOG.warn("Could not parse {}", rawValue);
+            return null;
+        }
+    }
+
+
+    private Double parsePercent(String space) {
+
+        final Matcher m = PERCENT_PATTERN.matcher(space);
         if (m.find()) {
             return Double.parseDouble(m.group(1)) / 100D;
         }
-        return 0D;
+        LOG.warn("Could not parse {}", space);
+        return null;
     }
 
-    private long parseSpace(String space) {
+    private Long parseSpace(String space) {
 
-        SpaceUnit unit = SpaceUnit.parse(space);
-        Matcher m = SPACE_PATTERN.matcher(space);
+        final Matcher m = SPACE_PATTERN.matcher(space);
         if (m.find()) {
-            return unit.toBytes(Double.parseDouble(m.group(1)));
+            return SpaceUnit.parse(space).toBytes(Double.parseDouble(m.group(1)));
         }
-        return 0L;
+        LOG.warn("Could not parse {}", space);
+        return null;
     }
 
 }
