@@ -69,7 +69,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
 
     private static final Logger LOG = getLogger(ArtifactoryCollector.class);
 
-    private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+))?\\s(KB|MB|GB|TB)");
+    private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+))?\\s(bytes|B|KB|MB|GB|TB)");
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s*%");
     private String artifactoryHost;
     private String contextRoot;
@@ -156,7 +156,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
 
     private Measurement createFileStorageStats(JsonObject json) {
         Measurement.Builder mb = Measurement.builder()
-                                            .name("binaries")
+                                            .name("fileStorage")
                                             .tag("server", "artifactory");
 
         parseSpace(json, "totalSpace", mb::value);
@@ -191,11 +191,10 @@ public class ArtifactoryCollector extends AbstractVerticle {
                                             .tag("server", "artifactory")
                                             .tag("repository", json.getString("repoKey"))
                                             .tag("repoType", json.getString("repoType"))
-                                            .tag("packageType", json.getString("packageType"));
-
-        parseInteger(json, "itemsCount", mb::value);
-        parseInteger(json, "filesCount", mb::value);
-        parseInteger(json, "foldersCount", mb::value);
+                                            .tag("packageType", json.getString("packageType"))
+                                            .value("itemsCount", json.getInteger("itemsCount", 0))
+                                            .value("filesCount", json.getInteger("filesCount", 0))
+                                            .value("foldersCount", json.getInteger("foldersCount", 0));
 
         parseSpace(json, "usedSpace", mb::value);
 
@@ -233,8 +232,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
                                .intValue();
         } catch (ParseException e) {
             LOG.warn("Could not parse {}", rawValue);
-            return null;
         }
+        return 0;
     }
 
 
@@ -245,17 +244,24 @@ public class ArtifactoryCollector extends AbstractVerticle {
             return Double.parseDouble(m.group(1)) / 100D;
         }
         LOG.warn("Could not parse {}", space);
-        return null;
+        return 0D;
     }
 
     private Long parseSpace(String space) {
 
         final Matcher m = SPACE_PATTERN.matcher(space);
         if (m.find()) {
-            return SpaceUnit.parse(space).toBytes(Double.parseDouble(m.group(1)));
+            final String rawValue = m.group(1);
+            try {
+                return SpaceUnit.parse(space).toBytes(NumberFormat.getNumberInstance(Locale.getDefault())
+                                                                  .parse(rawValue)
+                                                                  .doubleValue());
+            } catch (Exception e) {
+                LOG.warn("Could not parse {}", rawValue);
+            }
         }
         LOG.warn("Could not parse {}", space);
-        return null;
+        return 0L;
     }
 
 }

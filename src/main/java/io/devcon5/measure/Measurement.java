@@ -187,7 +187,9 @@ public class Measurement {
 
         public Builder tag(String name, String value) {
 
-            this.tags.put(name, value);
+            if(value != null) {
+                this.tags.put(name, value);
+            }
             return this;
         }
 
