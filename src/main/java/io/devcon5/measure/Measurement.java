@@ -186,7 +186,6 @@ public class Measurement {
         }
 
         public Builder tag(String name, String value) {
-
             if(value != null) {
                 this.tags.put(name, value);
             }
@@ -194,38 +193,44 @@ public class Measurement {
         }
 
         public Builder value(String name, String value) {
-
-            this.stringValues.put(name, value);
+            if(value != null) {
+                this.stringValues.put(name, String.valueOf(value));
+            }
             return this;
         }
 
         public Builder value(String name, Boolean value) {
-
-            this.booleanValues.put(name, value);
+            if(value != null) {
+                this.booleanValues.put(name, value);
+            }
             return this;
         }
 
         public Builder value(String name, Integer value) {
-
-            this.numberValues.put(name, value);
+            if(value != null) {
+                this.numberValues.put(name, value);
+            }
             return this;
         }
 
         public Builder value(String name, Long value) {
-
-            this.numberValues.put(name, value);
+            if(value != null) {
+                this.numberValues.put(name, value);
+            }
             return this;
         }
 
         public Builder value(String name, Double value) {
-
-            this.numberValues.put(name, value);
+            if(value != null) {
+                this.numberValues.put(name, value);
+            }
             return this;
         }
 
         public Builder value(String name, Float value) {
-
-            this.numberValues.put(name, value);
+            if(value != null) {
+                this.numberValues.put(name, value);
+            }
             return this;
         }
 

@@ -230,7 +230,7 @@ public class BinaryEncoding {
                     valueCallback.accept(buf.getString(from + 1, end));
                     return end + 1;
                 default:
-                    throw new IllegalArgumentException("Invalid type indicator: " + buf.getByte(from));
+                    throw new IllegalArgumentException("Invalid type indicator: " + buf.getByte(from) + "\nBuffer:" + buf.toString());
             }
         }
 
