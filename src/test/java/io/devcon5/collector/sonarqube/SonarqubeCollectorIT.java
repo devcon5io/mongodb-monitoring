@@ -32,18 +32,17 @@ public class SonarqubeCollectorIT {
         final Decoder<Buffer> decoder = BinaryEncoding.decoder();
 
         JsonObject config = new JsonObject()
+                .put("interval", 1000)
                 .put("servers", new JsonArray().add(new JsonObject()
                         .put("host", "localhost")
                         .put("port", 80)
-                        .put("auth", SonarqubeAuth.token("883b8127eec4a18f380be302fc2f1f0f07e8f539"))
-                        .put("interval", 1000)));
+                        .put("auth", SonarqubeAuth.token("883b8127eec4a18f380be302fc2f1f0f07e8f539"))));
 
         vertx.deployVerticle(SonarqubeCollector.class.getName(), new DeploymentOptions().setConfig(config));
 
         final Async measureReceived = context.async();
 
         vertx.eventBus().consumer(Digester.DIGEST_ADDR, msg -> {
-
             Measurement[] m = decoder.decode((Buffer) msg.body());
             System.out.println(Arrays.asList(m));
             measureReceived.complete();

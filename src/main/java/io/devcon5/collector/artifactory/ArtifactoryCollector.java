@@ -89,7 +89,8 @@ public class ArtifactoryCollector extends AbstractVerticle {
         this.contextRoot = config.getString("contextRoot", "/artifactory/");
         this.artifactoryPort = config.getInteger("port", 8081);
         this.authorization = config.getString("auth", defaultBasicAuth());
-        final long interval = config.getLong("interval", 60000L);
+
+        final long interval = config().getLong("interval", 60000L);
 
         this.webclient = WebClient.create(vertx);
         this.encoder = BinaryEncoding.encoder();
