@@ -24,8 +24,26 @@ Currently, the number of third-party services is limited but intended to grow in
 - [Artifactory](https://jfrog.com/artifactory/) - an artifact repository. Current support is limited to
 collect storage information via REST-API only.
 
+#### Planned:
+- Sonarqube
+- Jenkins
+    - /overallLoad/api/
+    - /queue/api/
+    - /api/
+- TeamCity
+- JMX
+- Bamboo?
+- Nexus?
+    
+
 ### Digesters
 - [Influx DB](https://www.influxdata.com/time-series-platform/influxdb/) - for storing the timeseries data
+
+#### Planned:
+- [Prometheus](https://prometheus.io/docs/instrumenting/pushing/) - via Pushgateway, maybe also as exporter 
+- [Open TSDB](http://opentsdb.net/docs/build/html/api_http/put.html)
+- [Graphite](http://graphiteapp.org/quick-start-guides/feeding-metrics.html)
+- CloudWatch?
 
 Example: MongoDB Monitoring with InfluxDB
 -----------------------------------------
