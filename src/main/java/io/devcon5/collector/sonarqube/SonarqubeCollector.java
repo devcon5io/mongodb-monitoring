@@ -74,12 +74,12 @@ public class SonarqubeCollector extends AbstractVerticle {
                                                   .map(JsonObject.class::cast)
                                                   .map(o -> Measurement.builder()
                                                                        .name("tasks")
-                                                                       .value("type", o.getString("type"))
-                                                                       .value("component", o.getString("componentKey"))
-                                                                       .value("status", o.getString("status"))
-                                                                       .value("submitter", o.getString("submitterLogin"))
+                                                                       .tag("type", o.getString("type"))
+                                                                       .tag("component", o.getString("componentKey"))
+                                                                       .tag("status", o.getString("status"))
+                                                                       .tag("submitter", o.getString("submitterLogin"))
+                                                                       .tag("type", o.getString("type"))
                                                                        .value("executionTime", o.getInteger("executionTimeMs", 0))
-                                                                       .value("type", o.getString("type"))
                                                                        .build())
                                                   .toArray(Measurement[]::new)));
 
