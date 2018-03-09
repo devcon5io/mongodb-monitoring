@@ -19,6 +19,7 @@
 package io.devcon5.measure;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 import io.vertx.core.buffer.Buffer;
@@ -118,6 +119,28 @@ public class BinaryEncodingTest {
         Measurement[] ms = decoder.decode(Buffer.buffer());
 
         assertEquals(0, ms.length);
+
+    }
+
+    @Test
+    public void encode_decode_nullValue() throws Exception {
+
+        Measurement m = Measurement.builder()
+                                   .name("test")
+                                   .timestamp(123456789)
+                                   .tag("tag1", "t1")
+                                   .tag("tag2", "t2")
+                                   .value("string", (String)null)
+                                   .value("int", 0)
+                                   .build();
+
+        Buffer b = encoder.encode(m);
+
+        assertNotNull(b);
+
+        Measurement[] m2 = decoder.decode(b);
+
+        assertFalse(m2[0].getValues().containsKey("string"));
 
     }
 }

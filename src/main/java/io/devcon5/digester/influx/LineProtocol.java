@@ -40,15 +40,19 @@ public class LineProtocol {
 
             final int initialSize = 128 * measurements.size();
             return measurements.stream()
-                           .collect(Collector.of(() -> Buffer.buffer(initialSize),
-                                                 this::appendMeasurement,
-                                                 Buffer::appendBuffer));
+                               .collect(Collector.of(() -> Buffer.buffer(initialSize),
+                                       this::appendMeasurement,
+                                       Buffer::appendBuffer));
         }
 
         private Buffer appendMeasurement(Buffer buf, Measurement m) {
 
             buf.appendString(m.getName());
-            m.getTags().forEach((k, v) -> buf.appendString(",").appendString(k).appendString("=").appendString(v));
+            m.getTags()
+             .forEach((k, v) -> buf.appendString(",")
+                                   .appendString(k)
+                                   .appendString("=")
+                                   .appendString(v.replaceAll("\\s", "\\\\ ")));
             buf.appendString(" ");
 
             final AtomicBoolean firstValue = new AtomicBoolean(true);
@@ -56,9 +60,16 @@ public class LineProtocol {
                 if (!firstValue.compareAndSet(true, false)) {
                     buf.appendString(",");
                 }
-                buf.appendString(k).appendString("=").appendString(String.valueOf(v));
+                buf.appendString(k).appendString("=");
+
+                if (v instanceof String) {
+                    buf.appendString("\"");
+                }
+                buf.appendString(String.valueOf(v));
                 if (v instanceof Integer || v instanceof Long) {
                     buf.appendString("i");
+                } else if (v instanceof String) {
+                    buf.appendString("\"");
                 }
             });
             buf.appendString(" ");
