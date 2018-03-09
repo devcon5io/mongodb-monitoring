@@ -23,9 +23,10 @@ Currently, the number of third-party services is limited but intended to grow in
 - [MongoDB](https://www.mongodb.com/) - the monitored database.
 - [Artifactory](https://jfrog.com/artifactory/) - an artifact repository. Current support is limited to
 collect storage information via REST-API only.
+- [Sonarqube](https://www.sonarqube.org/)  - current support collects components, compute engine activity and global
+issues count
 
 #### Planned:
-- Sonarqube
 - Jenkins
     - /overallLoad/api/
     - /queue/api/
