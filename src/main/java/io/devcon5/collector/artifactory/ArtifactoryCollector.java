@@ -81,7 +81,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     private ResultHandler<Measurement[]> resultHandler;
 
     @Override
-    public void start() throws Exception {
+    public void start() {
 
         this.webclient = WebClient.create(vertx);
         this.encoder = BinaryEncoding.encoder();
@@ -104,7 +104,7 @@ public class ArtifactoryCollector extends AbstractVerticle {
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop()  {
         this.webclient.close();
     }
 

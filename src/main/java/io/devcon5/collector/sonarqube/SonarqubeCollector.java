@@ -34,7 +34,7 @@ public class SonarqubeCollector extends AbstractVerticle {
     private ResultHandler<Measurement[]> resultHandler;
 
     @Override
-    public void start() throws Exception {
+    public void start()  {
 
         this.encoder = BinaryEncoding.encoder();
         this.webclient = WebClient.create(vertx);
@@ -57,17 +57,15 @@ public class SonarqubeCollector extends AbstractVerticle {
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop() {
         this.webclient.close();
     }
 
     private Handler<Long> pollStatus(ServiceClient client) {
 
         return l -> {
-            client.newGetRequest("/api/components/search?qualifiers=BRC,DIR,FIL,TRK,UTS&ps=100000")
-                  .send(this::processProjects);
+            client.newGetRequest("/api/components/search?qualifiers=BRC,DIR,FIL,TRK,UTS&ps=100000").send(this::processProjects);
             client.newGetRequest("/api/ce/activity").send(this::processCeActivity);
-
             client.newGetRequest("/api/issues/search?ps=1&severities=BLOCKER").send(countIssues("BLOCKER"));
             client.newGetRequest("/api/issues/search?ps=1&severities=CRITICAL").send(countIssues("CRITICAL"));
             client.newGetRequest("/api/issues/search?ps=1&severities=MAJOR").send(countIssues("MAJOR"));
@@ -115,10 +113,6 @@ public class SonarqubeCollector extends AbstractVerticle {
     private Handler<AsyncResult<HttpResponse<Buffer>>> countIssues(String severity) {
         return resp -> resultHandler.accept(resp.map(HttpResponse::bodyAsJsonObject)
                                                 .map(body -> body.getInteger("total", 0))
-                                                .map(count -> {
-                                                    LOG.info("issues of sev={}: {}", severity, count);
-                                                    return count;
-                                                })
                                                 .map(count -> new Measurement[]{Measurement.builder()
                                                                                            .name("issues")
                                                                                            .tag("severity", severity)
