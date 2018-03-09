@@ -16,6 +16,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.slf4j.Logger;
 
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -67,7 +68,10 @@ public class SonarqubeCollector extends AbstractVerticle {
                   .send(this::processProjects);
             client.newGetRequest("/api/ce/activity").send(this::processCeActivity);
 
-            client.newGetRequest("/api/issues/search?ps=1").send(pageIssues(client));
+            client.newGetRequest("/api/issues/search?ps=1&severities=BLOCKER").send(countIssues("BLOCKER"));
+            client.newGetRequest("/api/issues/search?ps=1&severities=CRITICAL").send(countIssues("CRITICAL"));
+            client.newGetRequest("/api/issues/search?ps=1&severities=MAJOR").send(countIssues("MAJOR"));
+            client.newGetRequest("/api/issues/search?ps=1&severities=MINOR").send(countIssues("MINOR"));
         };
     }
 
@@ -108,45 +112,18 @@ public class SonarqubeCollector extends AbstractVerticle {
 
     }
 
-    private Handler<AsyncResult<HttpResponse<Buffer>>> pageIssues(ServiceClient client) {
-        return resp -> {
-            if (resp.succeeded()) {
-                int total = resp.result().bodyAsJsonObject().getInteger("total", 0);
-                //TODO make this configurable
-                int chunksize = 500;
-                int chunks = (total / chunksize) + 1;
-                IntStream.range(0, chunks)
-                         .forEach(chunk -> {
-                             String uri = "/api/issues/search?ps=" + chunksize + "&amp;p=" + (chunk * chunksize + 1);
-                             client.newGetRequest(uri).send(this::processIssues);
-                         });
-
-            } else {
-                LOG.error("Could not fetch initial page", resp.cause());
-            }
-        };
-    }
-
-    private void processIssues(AsyncResult<HttpResponse<Buffer>> resp) {
-
-        resultHandler.accept(resp.map(HttpResponse::bodyAsJsonObject)
-                                 .map(body -> body.getJsonArray("issues")
-                                                  .stream()
-                                                  .map(JsonObject.class::cast)
-                                                  .map(this::toIssueMeasurement)
-                                                  .toArray(Measurement[]::new)));
-    }
-
-    private Measurement toIssueMeasurement(JsonObject o) {
-        return Measurement.builder()
-                          .name("issues")
-                          .tag("status", o.getString("status"))
-                          .tag("severity", o.getString("severity"))
-                          .tag("project", o.getString("project"))
-                          .tag("type", o.getString("type"))
-                          .value("effort", DurationParser.parse(o.getString("effort")))
-                          .value("debt", DurationParser.parse(o.getString("debt")))
-                          .build();
+    private Handler<AsyncResult<HttpResponse<Buffer>>> countIssues(String severity) {
+        return resp -> resultHandler.accept(resp.map(HttpResponse::bodyAsJsonObject)
+                                                .map(body -> body.getInteger("total", 0))
+                                                .map(count -> {
+                                                    LOG.info("issues of sev={}: {}", severity, count);
+                                                    return count;
+                                                })
+                                                .map(count -> new Measurement[]{Measurement.builder()
+                                                                                           .name("issues")
+                                                                                           .tag("severity", severity)
+                                                                                           .value("count", count)
+                                                        .build()}));
     }
 
 
