@@ -1,0 +1,36 @@
+{
+  "collector": {
+    "artifactory": {
+      "type": "io.devcon5.collector.artifactory.ArtifactoryCollector",
+      "interval": 60000,
+      "servers" : [
+        {
+          "host": "<host here>",
+          "port": 80,
+		  "contextRoot" : "/",
+          "auth": "Basic <username:password>"
+        }
+      ]
+    },
+	"sonarqube": {
+      "type": "io.devcon5.collector.sonarqube.SonarqubeCollector",
+      "interval": 60000,
+      "servers" : [
+        {
+          "host": "<host here>",
+          "port": 80,
+		  "contextRoot" : "/",
+          "auth": "Basic <token:>"
+        }
+      ]
+    }
+  },
+  "digester": {
+    "influx": {
+      "type": "io.devcon5.digester.influx.InfluxDigester",
+      "host": "localhost",
+      "port": 8086,
+      "database": "<db name here>"
+    }
+  }
+}
