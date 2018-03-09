@@ -39,9 +39,9 @@ public class JenkinsCollectorTest {
         JsonObject config = new JsonObject()
                 .put("interval", 1000)
                 .put("servers", new JsonArray().add(new JsonObject()
-                        .put("host", "prod.build.apps.straumann.com")
+                        .put("host", "localhost")
                         .put("port", 80)
-                        .put("auth", Auth.basic("u112505", "3cda6deea956d209cd9789db3ea06a21"))));
+                        .put("auth", Auth.basic("test", "test"))));
 
         vertx.deployVerticle(JenkinsCollector.class.getName(), new DeploymentOptions().setConfig(config));
 
