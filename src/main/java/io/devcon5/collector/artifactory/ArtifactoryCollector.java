@@ -27,12 +27,16 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import io.devcon5.collector.ResultHandler;
+import io.devcon5.collector.ServiceClient;
+import io.devcon5.collector.ServiceClientFactory;
 import io.devcon5.measure.BinaryEncoding;
 import io.devcon5.measure.Digester;
 import io.devcon5.measure.Encoder;
 import io.devcon5.measure.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -71,58 +75,47 @@ public class ArtifactoryCollector extends AbstractVerticle {
 
     private static final Pattern SPACE_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s(bytes|B|KB|MB|GB|TB)");
     private static final Pattern PERCENT_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)\\s*%");
-    private String artifactoryHost;
-    private String contextRoot;
-    private int artifactoryPort;
-    private String authorization;
 
     private WebClient webclient;
     private Encoder encoder;
+    private ResultHandler<Measurement[]> resultHandler;
 
     @Override
     public void start() throws Exception {
 
-        //TODO support multiple servers
-        final JsonObject config = config().getJsonArray("servers").getJsonObject(0);
-
-        this.artifactoryHost = config.getString("host", "localhost");
-        this.contextRoot = config.getString("contextRoot", "/artifactory/");
-        this.artifactoryPort = config.getInteger("port", 8081);
-        this.authorization = config.getString("auth", defaultBasicAuth());
-
-        final long interval = config().getLong("interval", 60000L);
-
         this.webclient = WebClient.create(vertx);
         this.encoder = BinaryEncoding.encoder();
+        this.resultHandler = ResultHandler.create(Measurement[].class)
+                                          .onSuccess(ms -> vertx.eventBus()
+                                                                .publish(Digester.DIGEST_ADDR, encoder.encode(ms)))
+                                          .orElse(t -> LOG.error("Error fetching metrics", t));
 
-        vertx.setPeriodic(interval, this::pollStatus);
+        //default interval for all servers
+        final long interval = config().getLong("interval", 60000L);
+
+        final ServiceClientFactory factory = ServiceClientFactory.newFactory(webclient);
+
+        config().getJsonArray("servers")
+                .stream()
+                .map(JsonObject.class::cast)
+                .forEach(config -> vertx.setPeriodic(config().getLong("interval", interval),
+                        pollStatus(factory.createClient(config))));
+
     }
 
-    private String defaultBasicAuth() {
-
-        return "Basic " + Base64.getEncoder()
-                                .encodeToString("admin:password".getBytes());
+    @Override
+    public void stop() throws Exception {
+        this.webclient.close();
     }
 
-    private void pollStatus(long timerId) {
-
-        HttpRequest<Buffer> request = webclient.get(artifactoryPort,
-                artifactoryHost,
-                contextRoot + "api/storagesummary");
-        if (this.authorization != null) {
-            request.putHeader("Authorization", authorization);
-        }
-        request.send(this::processResult);
+    private Handler<Long> pollStatus(ServiceClient client) {
+        return l -> client.newGetRequest("/api/storagesummary").send(this::processResult);
     }
 
     private void processResult(AsyncResult<HttpResponse<Buffer>> resp) {
-
-        if (resp.succeeded()) {
-            Collection<Measurement> m = processStatistics(resp.result().bodyAsJsonObject());
-            vertx.eventBus().publish(Digester.DIGEST_ADDR, encoder.encode(m));
-        } else {
-            resp.cause().printStackTrace();
-        }
+        resultHandler.accept(resp.map(HttpResponse::bodyAsJsonObject)
+                .map(body -> processStatistics(body).toArray(new Measurement[0]))
+        );
     }
 
     private Collection<Measurement> processStatistics(JsonObject obj) {
